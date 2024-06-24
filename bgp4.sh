@@ -47,7 +47,7 @@ while true; do
         sleep 0.5
         mkdir /root/bgp4
         cd /root/bgp4
-        wget https://github.com/radkesvat/WaterWall/releases/download/v1.18/Waterwall-linux-64.zip
+        wget https://github.com/radkesvat/WaterWall/releases/download/v1.21/Waterwall-linux-64.zip
         apt install unzip -y
         unzip Waterwall-linux-64.zip
         sleep 0.5
@@ -91,80 +91,35 @@ EOF
 
     if [ "$choice" -eq 1 ]; then
         echo "You chose Iran."
-        read -p "enter Kharej Ipv4: " ip_remote
-        read -p "Enter the SNI (default: www.speedtest.net): " input_sni
-        HOSTNAME=${input_sni:-www.speedtest.net}
+        read -p "enter iran Port: " port_local
+        read -p "enter kharej IP: " ip_remote
         cat > config.json << EOF
 {
-    "name": "reverse_reality_server_multiport",
+    "name": "bgp_client",
     "nodes": [
         {
-            "name": "users_inbound",
+            "name": "input",
             "type": "TcpListener",
             "settings": {
                 "address": "0.0.0.0",
-                "port": [443,65535],
+                "port": $port_local,
                 "nodelay": true
             },
-            "next": "header"
+            "next": "bgp_client"
         },
         {
-            "name": "header",
-            "type": "HeaderClient",
-            "settings": {
-                "data": "src_context->port"
-            },
-            "next": "bridge2"
-        },
-        {
-            "name": "bridge2",
-            "type": "Bridge",
-            "settings": {
-                "pair": "bridge1"
-            }
-        },
-        {
-            "name": "bridge1",
-            "type": "Bridge",
-            "settings": {
-                "pair": "bridge2"
-            }
-        },
-        {
-            "name": "reverse_server",
-            "type": "ReverseServer",
+            "name": "bgp_client",
+            "type": "Bgp4Client",
             "settings": {},
-            "next": "bridge1"
+            "next": "output"
         },
         {
-            "name": "reality_server",
-            "type": "RealityServer",
-            "settings": {
-                "destination": "reality_dest",
-                "password": "123456as"
-            },
-            "next": "reverse_server"
-        },
-        {
-            "name": "kharej_inbound",
-            "type": "TcpListener",
-            "settings": {
-                "address": "0.0.0.0",
-                "port": 443,
-                "nodelay": true,
-                "whitelist": [
-                    "$ip_remote/32"
-                ]
-            },
-            "next": "reality_server"
-        },
-        {
-            "name": "reality_dest",
+            "name": "output",
             "type": "TcpConnector",
             "settings": {
                 "nodelay": true,
-                "address": "$HOSTNAME",
-                "port": 443
+                "address":"$ip_remote",
+                "port":179
             }
         }
     ]
@@ -175,76 +130,41 @@ EOF
         sleep 0.5
         echo "Iran IPv4 is: $public_ip"
         echo "Kharej IPv4 is: $ip_remote"
-        echo "SNI $HOSTNAME"
         echo "Iran Setup Successfully Created "
     elif [ "$choice" -eq 2 ]; then
         echo "You chose Kharej."
-        read -p "enter Iran Ip: " ip_remote
-        read -p "Enter the SNI (default: www.speedtest.net): " input_sni
-        HOSTNAME=${input_sni:-www.speedtest.net}
+        read -p "enter kharej Port: " port_local
         cat > config.json << EOF
 {
-    "name": "reverse_reality_client_multiport",
+    "name": "bgp_server",
     "nodes": [
         {
-            "name": "outbound_to_core",
+            "name": "input",
+            "type": "TcpListener",
+            "settings": {
+                "address": "::",
+                "port": 179,
+                "nodelay": true
+            },
+            "next": "bgp_server"
+        },
+        {
+            "name":"bgp_server",
+            "type":"Bgp4Server",
+            "settings":{},
+            "next":"output"
+        },
+        
+        {
+            "name": "output",
             "type": "TcpConnector",
             "settings": {
                 "nodelay": true,
                 "address": "127.0.0.1",
-                "port": "dest_context->port"
-            }
-        },
-        {
-            "name": "header",
-            "type": "HeaderServer",
-            "settings": {
-                "override": "dest_context->port"
-            },
-            "next": "outbound_to_core"
-        },
-        {
-            "name": "bridge1",
-            "type": "Bridge",
-            "settings": {
-                "pair": "bridge2"
-            },
-            "next": "header"
-        },
-        {
-            "name": "bridge2",
-            "type": "Bridge",
-            "settings": {
-                "pair": "bridge1"
-            },
-            "next": "reverse_client"
-        },
-        {
-            "name": "reverse_client",
-            "type": "ReverseClient",
-            "settings": {
-                "minimum-unused": 16
-            },
-            "next": "reality_client"
-        },
-        {
-            "name": "reality_client",
-            "type": "RealityClient",
-            "settings": {
-                "sni": "$HOSTNAME",
-                "password": "123456as"
-            },
-            "next": "outbound_to_iran"
-        },
-        {
-            "name": "outbound_to_iran",
-            "type": "TcpConnector",
-            "settings": {
-                "nodelay": true,
-                "address": "$ip_remote",
-                "port": 443
+                "port": $port_local
             }
         }
+
     ]
 }
 EOF
@@ -252,8 +172,6 @@ EOF
         setup_waterwall_service
         sleep 0.5
         echo "Kharej IPv4 is: $public_ip"
-        echo "Iran IPv4 is: $ip_remote"
-        echo "SNI $HOSTNAME"
         echo "Kharej Setup Successfully Created "
     elif [ "$choice" -eq 3 ]; then
         sudo systemctl stop waterwall-bgp4
