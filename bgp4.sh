@@ -7,8 +7,8 @@ Description=Waterwall-bgp4 Service
 After=network.target
 
 [Service]
-ExecStart=/root/bgp4/Waterwall
-WorkingDirectory=/root/RRT
+ExecStart=/root/bgp4/Waterwall-bgp4
+WorkingDirectory=/root/bgp4
 Restart=always
 RestartSec=5
 User=root
@@ -45,8 +45,8 @@ while true; do
             sudo service ssh restart
         fi
         sleep 0.5
-        mkdir /root/RRT
-        cd /root/RRT
+        mkdir /root/bgp4
+        cd /root/bgp4
         wget https://github.com/radkesvat/WaterWall/releases/download/v1.18/Waterwall-linux-64.zip
         apt install unzip -y
         unzip Waterwall-linux-64.zip
@@ -256,11 +256,11 @@ EOF
         echo "SNI $HOSTNAME"
         echo "Kharej Setup Successfully Created "
     elif [ "$choice" -eq 3 ]; then
-        sudo systemctl stop waterwall
-        sudo systemctl disable waterwall
-        rm -rf /etc/systemd/system/waterwall.service
-        pkill -f Waterwall
-        rm -rf /root/RRT
+        sudo systemctl stop waterwall-bgp4
+        sudo systemctl disable waterwall-bgp4
+        rm -rf /etc/systemd/system/waterwall-bgp4.service
+        pkill -f Waterwall-bgp4
+        rm -rf /root/bgp4
 
         echo "Removed"
     elif [ "$choice" -eq 9 ]; then
